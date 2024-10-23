@@ -1,62 +1,106 @@
-import openpyxl
-from openpyxl.styles import PatternFill
+import os
+from openpyxl import load_workbook
 
-# Função para extrair dados do arquivo txt
-def extrair_dados(txt_path):
-    with open(txt_path, 'r') as file:
-        content = file.readlines()
+# Criar a pasta 'arquivos' se ela não existir
+if not os.path.exists('arquivos'):
+    os.makedirs('arquivos')
 
-    coluna1 = []  # Para armazenar os números da primeira coluna
-    coluna2 = []  # Para armazenar os números da segunda coluna
+# Abrir o arquivo com os dados da tabela
+with open('table.txt', 'r') as file:
+    lines = file.readlines()
 
-    for line in content:
-        if line.strip() and line[0].isdigit():  # Verifica se a linha começa com um número
-            numeros = line.split()
-            if len(numeros) >= 2:  # Verifica se há pelo menos 2 números
-                coluna1.append(int(numeros[0]))  # Adiciona o primeiro número à coluna 1 como inteiro
-                coluna2.append(int(numeros[1]))  # Adiciona o segundo número à coluna 2 como inteiro
+# Criar listas para armazenar os valores de cada coluna
+start_node_values = []
+end_node_values = []
+span_loss_values = []
+eol_att_values = []
 
-    return coluna1, coluna2
+# Iterar sobre as linhas do arquivo e extrair os valores das colunas relevantes
+for line in lines[1:]:  # Ignorar o cabeçalho
+    columns = line.split()  # Separar as colunas por espaços
+    if len(columns) == 4:
+        start_node_values.append(columns[0])  # Pegar a primeira coluna (Start node)
+        end_node_values.append(columns[1])    # Pegar a segunda coluna (End node)
+        span_loss_values.append(columns[2])   # Pegar a terceira coluna (Span loss)
+        eol_att_values.append(columns[3])     # Pegar a quarta coluna (EOL ATT THR)
 
-# Função para adicionar dados em um Excel existente
-def adicionar_dados_no_excel(coluna1, coluna2, excel_path):
-    # Carregar o arquivo Excel existente
-    workbook = openpyxl.load_workbook(excel_path)
-    sheet = workbook.active
+# Reordenar os valores de eol_att_values e span_loss_values de acordo com o padrão solicitado
+def reorder_values(values):
+    reordered_values = []
+    for i in range(0, len(values), 4):
+        if i < len(values):
+            reordered_values.append(values[i])   # Linha 1
+        if i + 2 < len(values):
+            reordered_values.append(values[i + 2])  # Linha 3
+        if i + 1 < len(values):
+            reordered_values.append(values[i + 1])  # Linha 2
+        if i + 3 < len(values):
+            reordered_values.append(values[i + 3])  # Linha 4
+    return reordered_values
 
-    # Inicializa a linha de escrita, considerando a última linha preenchida
-    linha_atual = sheet.max_row + 1  # Começa a partir da última linha preenchida
+reordered_eol_values = reorder_values(eol_att_values)
+reordered_span_loss_values = reorder_values(span_loss_values)
 
-    # Escreve os dados em grupos de três
-    for i in range(0, len(coluna1), 3):
-        # Escreve até três linhas de dados
-        for j in range(3):
-            if i + j < len(coluna1):  # Verifica se ainda há dados para escrever
-                # Preenche os valores
-                sheet[f'H{linha_atual}'] = coluna1[i + j]  # Coluna H
-                sheet[f'J{linha_atual}'] = coluna2[i + j]  # Coluna J
+# Salvar os valores extraídos em arquivos na pasta 'arquivos'
+with open('arquivos/start_node.txt', 'w') as start_file:
+    for value in start_node_values:
+        start_file.write(value + '\n')
 
-                # Aplica a cor baseada no valor
-                for col in [f'H{linha_atual}', f'J{linha_atual}']:
-                    if sheet[col].value > 10:
-                        sheet[col].fill = PatternFill(start_color="00FF00", end_color="00FF00", fill_type="solid")  # Verde
-                    else:
-                        sheet[col].fill = PatternFill(start_color="FF0000", end_color="FF0000", fill_type="solid")  # Vermelho
+with open('arquivos/end_node.txt', 'w') as end_file:
+    for value in end_node_values:
+        end_file.write(value + '\n')
 
-                linha_atual += 1  # Move para a próxima linha
-        # Pula quatro linhas após cada grupo de três
-        linha_atual += 4
+with open('arquivos/span_loss.txt', 'w') as span_file:
+    for value in reordered_span_loss_values:
+        span_file.write(value + '\n')
 
-    # Salvar o arquivo Excel
-    workbook.save(excel_path)
+with open('arquivos/eol.txt', 'w') as eol_file:
+    for value in reordered_eol_values:
+        eol_file.write(value + '\n')
 
-# Caminhos dos arquivos
-txt_path = 'C:\\Users\\hreal\\OneDrive - Infinera\\Desktop\\aut-rotas\\teste.txt'
-excel_path = 'C:\\Users\\hreal\\OneDrive - Infinera\\Desktop\\aut-rotas\\done.xlsx'
+print("Valores extraídos e salvos na pasta 'arquivos' com sucesso, com EOL ATT e Span Loss reordenados.")
 
-# Extração dos dados e adição no Excel existente
-coluna1, coluna2 = extrair_dados(txt_path)
-adicionar_dados_no_excel(coluna1, coluna2, excel_path)
+# Carregar o arquivo eol.txt para pegar os valores a serem inseridos no Excel
+with open('arquivos/eol.txt', 'r') as eol_file:
+    eol_values = eol_file.readlines()
 
-# Mensagem de confirmação
-print("Os dados foram extraídos e adicionados ao Excel com sucesso! Programa finalizado!")
+# Remover possíveis quebras de linha
+eol_values = [value.strip() for value in eol_values]
+
+# Carregar os valores de span_loss.txt
+with open('arquivos/span_loss.txt', 'r') as span_file:
+    span_loss_values = span_file.readlines()
+
+# Remover possíveis quebras de linha
+span_loss_values = [value.strip() for value in span_loss_values]
+
+# Abrir o arquivo controle-potencia-poprecife.xlsx
+excel_path = 'controle-potencia-poprecife.xlsx'
+workbook = load_workbook(excel_path)
+
+# Selecionar a planilha ativa (ou a planilha específica, se souber o nome)
+sheet = workbook.active
+
+# Posições-alvo para inserir os dados
+positions = [(2, 'F', 'J'), (6, 'F', 'J'), (10, 'F', 'J'), (14, 'F', 'J'), (18, 'F', 'J')]
+
+# Preencher as células F2, J2, F6, J6, etc. com os valores de eol.txt
+for i, (row, col_f, col_j) in enumerate(positions):
+    index = i * 2  # Pegamos 2 valores de cada vez
+    if index < len(eol_values):  # Certificar que ainda há valores a serem usados
+        sheet[f'{col_f}{row}'] = eol_values[index]      # Ex: F2, F6...
+    if index + 1 < len(eol_values):  # Certificar que há um segundo valor
+        sheet[f'{col_j}{row}'] = eol_values[index + 1]  # Ex: J2, J6...
+
+# Preencher as células F3, J3, F7, J7, etc. com os valores de span_loss.txt
+for i, (row, col_f, col_j) in enumerate(positions):
+    index = i * 2  # Pegamos 2 valores de cada vez
+    if index < len(span_loss_values):  # Certificar que ainda há valores a serem usados
+        sheet[f'{col_f}{row + 1}'] = span_loss_values[index]      # Ex: F3, F7...
+    if index + 1 < len(span_loss_values):  # Certificar que há um segundo valor
+        sheet[f'{col_j}{row + 1}'] = span_loss_values[index + 1]  # Ex: J3, J7...
+
+# Salvar o arquivo Excel sem sobrescrever o conteúdo existente
+workbook.save(excel_path)
+
+print(f"Valores de eol.txt e span_loss.txt adicionados ao arquivo {excel_path} com sucesso.")

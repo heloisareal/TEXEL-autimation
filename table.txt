@@ -1,0 +1,8 @@
+Span Measurements > Span Measurements
+
+Start node     	End node       	Span loss (dB)	EOL ATT THR (dB)
+
+RCE-IBA01-CTW04	RCE-JFE01-CTW01	8.4           	7.7
+RCE-IBA01-CTW04	RCE-JFE01-CTW01	12.4          	17.2
+RCE-JFE01-CTW01	RCE-IBA01-CTW04	8.5           	7.7
+RCE-JFE01-CTW01	RCE-IBA01-CTW04	11.1          	17.2
